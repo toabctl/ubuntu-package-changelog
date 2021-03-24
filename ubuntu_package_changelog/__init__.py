@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import sys
 import argparse
 import urllib.request
 from launchpadlib.launchpad import Launchpad
@@ -25,7 +26,10 @@ def _lp_get_changelog_url(args):
         distro_series=lp_series,
         status="Published",
         order_by_date=True)
-    return sources[0].changelogUrl()
+    if len(sources) == 1:
+        return sources[0].changelogUrl()
+    else:
+        return None
 
 
 def _args_validate_ppa_name(value):
@@ -55,6 +59,10 @@ def main():
     parser = _parser()
     args = parser.parse_args()
     changelog_url = _lp_get_changelog_url(args)
+    if not changelog_url:
+        print('no changelog found')
+        sys.exit(0)
+
     with urllib.request.urlopen(changelog_url) as response:
         for count, line in enumerate(response.readlines()):
             if args.lines > 0 and count > args.lines:
