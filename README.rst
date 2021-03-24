@@ -18,6 +18,12 @@ a given Ubuntu source package. Eg::
 
    -- Thadeu Lima de Souza Cascardo <cascardo@canonical.com>  Fri, 19 Mar 2021 13:32:55 -0300
 
+It's also possible to get a changelog for a package in a PPA::
+
+  ubuntu-package-changelog -ppa cloud-images/eks-01.11.0 focal Release cni
+  cni (0.6.0-0ubuntu1) bionic; urgency=medium
+  [...]
+
 Installation
 ============
 
