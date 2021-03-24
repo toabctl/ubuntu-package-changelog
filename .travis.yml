@@ -1,9 +1,0 @@
-language: python
-matrix:
-  include:
-  - python: 3.8
-    env: TOX_ENV=lint
-install:
-- pip install tox
-script:
-- tox -e $TOX_ENV
