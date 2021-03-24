@@ -18,10 +18,16 @@ jobs:
     - name: Lint with flake8
       run: |
         tox -elint
-  snap-build:
+  build-and-run-snap:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - uses: snapcore/action-build@v1
-  snap-test:
-    needs: snap-build
+      id: snapcraft
+    - uses: actions/upload-artifact@v2
+      with:
+        name: snap
+        path: ${{ steps.snapcraft.outputs.snap }}
+    - run: |
+        sudo snap install --dangerous ${{ steps.snapcraft.outputs.snap }}
+        ubuntu-package-changelog -h
