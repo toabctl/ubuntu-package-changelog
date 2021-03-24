@@ -12,9 +12,13 @@ def _lp_get_changelog_url(args):
         'production', version='devel')
 
     ubuntu = launchpad.distributions["ubuntu"]
+    pocket = args.pocket
     if args.ppa:
         ppa_owner, ppa_name = args.ppa.split('/')
         archive = launchpad.people[ppa_owner].getPPAByName(name=ppa_name)
+        if args.pocket != 'Release':
+            print('using pocket "Release" when using a PPA ...')
+            pocket = 'Release'
     else:
         archive = ubuntu.main_archive
 
@@ -22,7 +26,7 @@ def _lp_get_changelog_url(args):
     sources = archive.getPublishedSources(
         exact_match=True,
         source_name=args.package,
-        pocket=args.pocket,
+        pocket=pocket,
         distro_series=lp_series,
         status="Published",
         order_by_date=True)
