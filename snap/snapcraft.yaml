@@ -27,3 +27,4 @@ parts:
     source: .
     build-packages:
       - python3-setuptools-scm
+      - libffi-dev
