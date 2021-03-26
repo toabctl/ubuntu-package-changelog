@@ -31,3 +31,4 @@ parts:
       - libffi-dev
       - rustc
       - cargo
+      - libssl-dev
