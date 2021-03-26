@@ -27,4 +27,6 @@ parts:
     source: .
     build-packages:
       - python3-setuptools-scm
+      # for python cryptography
       - libffi-dev
+      - rustc
