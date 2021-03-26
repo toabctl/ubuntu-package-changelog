@@ -27,7 +27,15 @@ It's also possible to get a changelog for a package in a PPA::
 Installation
 ============
 
-Curently, installing into a `virtualenv` is the best thing todo::
+`ubuntu-package-changelog` is available as snap.
+
+|Get it from the Snap Store|
+
+For installation, do::
+
+  snap install ubuntu-package-changelog
+
+The other option is installing it into a `virtualenv`::
 
   virtualenv venv
   source venv/bin/activate
@@ -40,3 +48,7 @@ Contributions
 
 Please use github (https://github.com/toabctl/ubuntu-package-changelog) issues
 and pull requests for discussions and contribution.
+
+
+.. |Get it from the Snap Store| image:: https://snapcraft.io/static/images/badges/en/snap-store-white.svg
+   :target: https://snapcraft.io/ubuntu-package-changelog
