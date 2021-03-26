@@ -4,7 +4,7 @@ ubuntu-package-changelog
 `ubuntu-package-changelog` can be used to get a changelog for
 a given Ubuntu source package. Eg::
 
-  ubuntu-package-changelog focal Updates linux-azure --lines 12
+  ubuntu-package-changelog focal Updates linux-azure
   linux-azure (5.4.0-1043.45) focal; urgency=medium
 
     [ Ubuntu: 5.4.0-70.78 ]
@@ -18,6 +18,8 @@ a given Ubuntu source package. Eg::
 
    -- Thadeu Lima de Souza Cascardo <cascardo@canonical.com>  Fri, 19 Mar 2021 13:32:55 -0300
 
+By default, only the latest changelog entry is shown. To see more entries, use the `--entries`
+flag.
 It's also possible to get a changelog for a package in a PPA::
 
   ubuntu-package-changelog -ppa cloud-images/eks-01.11.0 focal Release cni
