@@ -30,3 +30,4 @@ parts:
       # for python cryptography
       - libffi-dev
       - rustc
+      - cargo
