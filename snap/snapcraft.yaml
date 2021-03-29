@@ -9,7 +9,7 @@ description: |
   Example usage:
   ubuntu-package-changelog focal Updates linux-azure --lines 12
 
-grade: devel
+grade: stable
 confinement: strict
 
 apps:
