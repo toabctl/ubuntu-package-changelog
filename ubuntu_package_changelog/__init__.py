@@ -61,7 +61,7 @@ def main():
     args = parser.parse_args()
     if args.lp_user:
         lp = Launchpad.login_with(
-            'toabctl',
+            args.lp_user,
             'production', version='devel')
     else:
         lp = Launchpad.login_anonymously(
