@@ -17,6 +17,7 @@ apps:
     command: bin/ubuntu-package-changelog
     plugs:
       - network
+      - password-manager-service
     environment:
        LC_ALL: C.UTF-8
        PYTHONPATH: $SNAP/usr/lib/python3/dist-packages:$SNAP/lib/python3.8/site-packages/

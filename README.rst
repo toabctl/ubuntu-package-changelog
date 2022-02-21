@@ -44,6 +44,11 @@ For installation, do::
 
   snap install ubuntu-package-changelog
 
+To access private PPAs, it's useful to connect the `password-manager-service`
+so authorization is only done once::
+
+  snap connect ubuntu-package-changelog:password-manager-service
+
 The other option is installing it into a `virtualenv`::
 
   virtualenv venv
