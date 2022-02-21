@@ -2,7 +2,7 @@
 
 import sys
 import argparse
-import urllib.request
+import urllib.parse
 from launchpadlib.launchpad import Launchpad
 
 
@@ -72,16 +72,17 @@ def main():
         print('no changelog found')
         sys.exit(0)
 
-    with urllib.request.urlopen(changelog_url) as response:
-        entry_count = 0
-        for line in response.readlines():
-            line = line.rstrip().decode('utf-8')
-            if line.startswith(' -- '):
-                entry_count += 1
-            if args.entries > 0 and entry_count >= args.entries:
-                print(line)
-                break
+    url = lp._root_uri.append(urllib.parse.urlparse(changelog_url).path.lstrip('/'))
+    resp = lp._browser.get(url).decode('utf-8')
+    entry_count = 0
+    for line in resp.splitlines():
+        line = line.rstrip()
+        if line.startswith(' -- '):
+            entry_count += 1
+        if args.entries > 0 and entry_count >= args.entries:
             print(line)
+            break
+        print(line)
 
 
 if __name__ == '__main__':
