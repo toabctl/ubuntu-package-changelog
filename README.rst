@@ -26,6 +26,13 @@ It's also possible to get a changelog for a package in a PPA::
   cni (0.6.0-0ubuntu1) bionic; urgency=medium
   [...]
 
+It's also possible to list changelog entries for private PPAs. For that, `--lp-user`
+must be given. Eg::
+
+  ubuntu-package-changelog --lp-user toabctl --ppa fips-cc-stig/cc bionic Release fips-initramfs
+  fips-initramfs (0.0.11~rc5) bionic; urgency=medium
+  [...]
+
 Installation
 ============
 
