@@ -6,16 +6,12 @@ import urllib.request
 from launchpadlib.launchpad import Launchpad
 
 
-def _lp_get_changelog_url(args):
-    launchpad = Launchpad.login_anonymously(
-        'ubuntu-package-changelog',
-        'production', version='devel')
-
-    ubuntu = launchpad.distributions["ubuntu"]
+def _lp_get_changelog_url(args, lp):
+    ubuntu = lp.distributions["ubuntu"]
     pocket = args.pocket
     if args.ppa:
         ppa_owner, ppa_name = args.ppa.split('/')
-        archive = launchpad.people[ppa_owner].getPPAByName(name=ppa_name)
+        archive = lp.people[ppa_owner].getPPAByName(name=ppa_name)
         if args.pocket != 'Release':
             print('using pocket "Release" when using a PPA ...')
             pocket = 'Release'
@@ -45,6 +41,7 @@ def _args_validate_ppa_name(value):
 def _parser():
     parser = argparse.ArgumentParser(
         description='Ubuntu package changelog finder')
+    parser.add_argument('--lp-user', help='Launchpad username', default=None)
     parser.add_argument('--ppa', help='Search for a package in the given PPA instead'
                         'of the Ubuntu archive. Given PPA must have the '
                         'format "owner/ppa-name". Eg. "toabctl/testing"',
@@ -62,7 +59,15 @@ def _parser():
 def main():
     parser = _parser()
     args = parser.parse_args()
-    changelog_url = _lp_get_changelog_url(args)
+    if args.lp_user:
+        lp = Launchpad.login_with(
+            'toabctl',
+            'production', version='devel')
+    else:
+        lp = Launchpad.login_anonymously(
+            'production', version='devel')
+
+    changelog_url = _lp_get_changelog_url(args, lp)
     if not changelog_url:
         print('no changelog found')
         sys.exit(0)
