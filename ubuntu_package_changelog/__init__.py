@@ -1,9 +1,67 @@
 #!/usr/bin/python3
 
+import re
 import sys
 import argparse
 import urllib.parse
+import requests
 from launchpadlib.launchpad import Launchpad
+
+def _get_changelogs_ubuntu_com_changelog(package_name):
+    """
+    Return changelog for sourc package
+
+    :param str package_name: Source package name
+    :param list ppas: List of possible ppas package installed from
+    :raises Exception: If changelog file could not be downloaded
+    :return: changelog
+    :rtype: str
+    """
+
+    package_prefix = package_name[0:1]
+    # packages starting with 'lib' are special
+    if package_name.startswith("lib"):
+        package_prefix = package_name[0:4]
+
+    # packages ending with ':amd64' are special
+    if package_name.endswith(":amd64"):
+        package_name = package_name[:-6]
+
+    changelog_base_url = "http://changelogs.ubuntu.com/changelogs/pool/main"
+    package_versions_url = "{}/{}/{}/?C=M;O=D".format(
+        changelog_base_url,
+        package_prefix,
+        package_name,
+        )
+
+    versions_response = requests.get(package_versions_url)
+    versions_html_raw = versions_response.text
+
+    # Match "<a href="20181120/">20181120/</a> 20-Nov-2018 16:33"
+    regex = re.compile(r"""<a\s+href="{}_(?P<version>.*?)/">{}_.*?/</a>""".format(package_name, package_name),
+                       re.VERBOSE)
+
+    latest_version = None
+
+    for m in regex.finditer(versions_html_raw):
+        latest_version = m.group("version")
+        break
+
+
+    # Changelog URL example http://changelogs.ubuntu.com/changelogs/pool/main/l/linux-gkeop/linux-gkeop_5.4.0-1048.51/changelog
+    changelog_url = "{}/{}/{}/{}_{}/changelog".format(
+        changelog_base_url,
+        package_prefix,
+        package_name,
+        package_name,
+        latest_version,
+        )
+
+
+    changelog_reponse = requests.get(changelog_url)
+    changelog = changelog_reponse.text
+    return changelog
+
 
 
 def _lp_get_changelog_url(args, lp):
@@ -79,6 +137,14 @@ def _parser():
                              'to retrieve changelog for. '
                         'Default: %(default)s',
                         default='amd64')
+    parser.add_argument('--use-changelogs-ubuntu-com',
+                        help='Use changelog.ubuntu.com to get latest changelog '
+                             'for the source package. This is useful if it is '
+                             'a kernel that was copied from a private PPA, '
+                             'for example during an embargoed CVE. This option '
+                             'assumes that the package is in the main Ubuntu '
+                             'archive',
+                        action='store_true', default=False)
     parser.add_argument('series', help='the Ubuntu series eg. "20.04" or "focal"')
     parser.add_argument('pocket',
                         choices=['Release', 'Security', 'Updates', 'Proposed', 'Backports'],
@@ -90,21 +156,25 @@ def _parser():
 def main():
     parser = _parser()
     args = parser.parse_args()
-    if args.lp_user:
-        lp = Launchpad.login_with(
-            args.lp_user,
-            'production', version='devel')
+    if not args.use_changelogs_ubuntu_com:
+        if args.lp_user:
+            lp = Launchpad.login_with(
+                args.lp_user,
+                'production', version='devel')
+        else:
+            lp = Launchpad.login_anonymously(
+                'production', version='devel')
+
+        changelog_url = _lp_get_changelog_url(args, lp)
+        if not changelog_url:
+            print('no changelog found')
+            sys.exit(0)
+
+        url = lp._root_uri.append(urllib.parse.urlparse(changelog_url).path.lstrip('/'))
+        resp = lp._browser.get(url).decode('utf-8')
     else:
-        lp = Launchpad.login_anonymously(
-            'production', version='devel')
+        resp = _get_changelogs_ubuntu_com_changelog(args.package)
 
-    changelog_url = _lp_get_changelog_url(args, lp)
-    if not changelog_url:
-        print('no changelog found')
-        sys.exit(0)
-
-    url = lp._root_uri.append(urllib.parse.urlparse(changelog_url).path.lstrip('/'))
-    resp = lp._browser.get(url).decode('utf-8')
     entry_count = 0
     for line in resp.splitlines():
         line = line.rstrip()
