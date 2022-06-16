@@ -7,6 +7,7 @@ import urllib.parse
 import requests
 from launchpadlib.launchpad import Launchpad
 
+
 def _get_changelogs_ubuntu_com_changelog(package_name):
     """
     Return changelog for sourc package
@@ -47,8 +48,8 @@ def _get_changelogs_ubuntu_com_changelog(package_name):
         latest_version = m.group("version")
         break
 
-
-    # Changelog URL example http://changelogs.ubuntu.com/changelogs/pool/main/l/linux-gkeop/linux-gkeop_5.4.0-1048.51/changelog
+    # Changelog URL example http://changelogs.ubuntu.com/changelogs/pool/main\
+    # /l/linux-gkeop/linux-gkeop_5.4.0-1048.51/changelog
     changelog_url = "{}/{}/{}/{}_{}/changelog".format(
         changelog_base_url,
         package_prefix,
@@ -57,11 +58,9 @@ def _get_changelogs_ubuntu_com_changelog(package_name):
         latest_version,
         )
 
-
     changelog_reponse = requests.get(changelog_url)
     changelog = changelog_reponse.text
     return changelog
-
 
 
 def _lp_get_changelog_url(args, lp):
