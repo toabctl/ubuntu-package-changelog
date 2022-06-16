@@ -19,9 +19,30 @@ def _lp_get_changelog_url(args, lp):
         archive = ubuntu.main_archive
 
     lp_series = ubuntu.getSeries(name_or_version=args.series)
+    if args.binary_package and args.binary_package_architecture:
+        # a binary package name was specified - find the source package name
+        # before getting changelog.
+        lp_arch_series = lp_series.getDistroArchSeries(
+            archtag=args.binary_package_architecture)
+        binaries = archive.getPublishedBinaries(
+            exact_match=True,
+            binary_name=args.package,
+            pocket=pocket,
+            distro_arch_series=lp_arch_series,
+            status="Published",
+            order_by_date=True,
+        )
+        if len(binaries):
+            for binary in binaries:
+                print(binary.source_package_version)
+                print(binary.binary_package_version)
+            # now get the source package name so we can get the changelog
+            source_package_name = binaries[0].source_package_name
+    else:
+        source_package_name = args.package
     sources = archive.getPublishedSources(
         exact_match=True,
-        source_name=args.package,
+        source_name=source_package_name,
         pocket=pocket,
         distro_series=lp_series,
         status="Published",
@@ -48,6 +69,16 @@ def _parser():
                         type=_args_validate_ppa_name)
     parser.add_argument('--entries', help='number of changelog entries to get from the '
                         'changelog. 0 mean all. Default: %(default)s', type=int, default=1)
+    parser.add_argument('--binary-package',
+                        help='Set this option if you wish to get the changelog for the '
+                        'source package of the specified binary package name. '
+                        'Default: %(default)s',
+                        action='store_true', default=False)
+    parser.add_argument('--binary-package-architecture',
+                        help='The architecture of the binary package you wish '
+                             'to retrieve changelog for. '
+                        'Default: %(default)s',
+                        default='amd64')
     parser.add_argument('series', help='the Ubuntu series eg. "20.04" or "focal"')
     parser.add_argument('pocket',
                         choices=['Release', 'Security', 'Updates', 'Proposed', 'Backports'],
