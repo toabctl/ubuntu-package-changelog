@@ -65,6 +65,7 @@ def main():
             'production', version='devel')
     else:
         lp = Launchpad.login_anonymously(
+            'ubuntu-package-changelog',
             'production', version='devel')
 
     changelog_url = _lp_get_changelog_url(args, lp)
