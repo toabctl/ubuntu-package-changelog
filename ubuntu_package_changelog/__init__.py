@@ -19,17 +19,53 @@ def _lp_get_changelog_url(args, lp):
         archive = ubuntu.main_archive
 
     lp_series = ubuntu.getSeries(name_or_version=args.series)
-    sources = archive.getPublishedSources(
-        exact_match=True,
-        source_name=args.package,
-        pocket=pocket,
-        distro_series=lp_series,
-        status="Published",
-        order_by_date=True)
+    sources = _get_published_sources(archive,
+                                     args.package,
+                                     lp_series,
+                                     pocket)
+    if len(sources) == 0:
+        # unable to find published sources for args.package.
+        # Perhaps this is a binary package name so we can
+        # do a lookup to see if there exists a source package for
+        # args.package binary package.
+        binaries = _get_binary_packages(archive,
+                                        args.package,
+                                        pocket)
+        if len(binaries):
+            # there were published binaries with this name.
+            # now get the source package name so we can get the changelog
+            source_package_name = binaries[0].source_package_name
+            sources = _get_published_sources(archive,
+                                             source_package_name,
+                                             lp_series,
+                                             pocket)
+
     if len(sources) == 1:
         return sources[0].changelogUrl()
     else:
         return None
+
+
+def _get_binary_packages(archive, binary_package_name, pocket):
+    binaries = archive.getPublishedBinaries(
+        exact_match=True,
+        binary_name=binary_package_name,
+        pocket=pocket,
+        status="Published",
+        order_by_date=True,
+    )
+    return binaries
+
+
+def _get_published_sources(archive, source_package_name, lp_series, pocket):
+    sources = archive.getPublishedSources(
+        exact_match=True,
+        source_name=source_package_name,
+        pocket=pocket,
+        distro_series=lp_series,
+        status="Published",
+        order_by_date=True)
+    return sources
 
 
 def _args_validate_ppa_name(value):
@@ -52,7 +88,7 @@ def _parser():
     parser.add_argument('pocket',
                         choices=['Release', 'Security', 'Updates', 'Proposed', 'Backports'],
                         help='The pocket to search for. Default: %(default)s')
-    parser.add_argument('package', help='the source package name')
+    parser.add_argument('package', help='the source or binary package name')
     return parser
 
 
