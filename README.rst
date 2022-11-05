@@ -33,6 +33,97 @@ must be given. Eg::
   fips-initramfs (0.0.11~rc5) bionic; urgency=medium
   [...]
 
+
+`ubuntu-package-changelog` can be also used to highlight the CVEs referenced in a changelog for
+a given Ubuntu source package. Note this also shows the CVE priority assigned by the Ubuntu security team. Eg::
+
+    ubuntu-package-changelog --highlight-cves focal Updates linux-azure
+    linux-azure (5.4.0-1094.100) focal; urgency=medium
+
+      CVEs addressed/mitigated in linux-azure version 5.4.0-1094.100:
+        CVE-2022-2602 (high priority)
+        CVE-2022-41674 (medium priority)
+        CVE-2022-42721 (medium priority)
+        CVE-2022-42720 (medium priority)
+
+      [ Ubuntu: 5.4.0-131.147 ]
+
+      * CVE-2022-2602
+        - SAUCE: io_uring/af_unix: defer registered files gc to io_uring release
+        - SAUCE: io_uring/af_unix: fix memleak during unix GC
+      * CVE-2022-41674
+        - SAUCE: wifi: cfg80211: fix u8 overflow in
+          cfg80211_update_notlisted_nontrans()
+        - SAUCE: wifi: cfg80211/mac80211: reject bad MBSSID elements
+        - SAUCE: wifi: cfg80211: ensure length byte is present before access
+        - SAUCE: wifi: mac80211_hwsim: avoid mac80211 warning on bad rate
+        - SAUCE: wifi: cfg80211: update hidden BSSes to avoid WARN_ON
+      * CVE-2022-42721
+        - SAUCE: wifi: cfg80211: avoid nontransmitted BSS list corruption
+      * CVE-2022-42720
+        - SAUCE: wifi: cfg80211: fix BSS refcounting bugs
+
+     -- Thadeu Lima de Souza Cascardo <cascardo@canonical.com>  Sun, 16 Oct 2022 23:55:23 -0300
+
+If you wish to use `ubuntu-package-changelog` to show CVE descriptions when highlighting the CVEs referenced in a changelog for
+a given Ubuntu source package. Eg::
+
+    ubuntu-package-changelog --highlight-cves --highlight-cves-show-cve-description focal Updates linux-azure
+    linux-azure (5.4.0-1094.100) focal; urgency=medium
+
+      CVEs addressed/mitigated in linux-azure version 5.4.0-1094.100:
+        CVE-2022-2602 (high priority):  David Bouman and Billy Jheng Bing Jhong discovered that a race condition existed in the io_uring subsystem in the Linux kernel, leading to a use- after-free vulnerability. A local attacker could use this to cause a denial of service (system crash) or possibly execute arbitrary code.
+        CVE-2022-41674 (medium priority):  Sönke Huster discovered that an integer overflow vulnerability existed in the WiFi driver stack in the Linux kernel, leading to a buffer overflow. A physically proximate attacker could use this to cause a denial of service (system crash) or possibly execute arbitrary code.
+        CVE-2022-42721 (medium priority):  Sönke Huster discovered that the WiFi driver stack in the Linux kernel did not properly handle BSSID/SSID lists in some situations. A physically proximate attacker could use this to cause a denial of service (infinite loop).
+        CVE-2022-42720 (medium priority):  Sönke Huster discovered that the WiFi driver stack in the Linux kernel did not properly perform reference counting in some situations, leading to a use-after-free vulnerability. A physically proximate attacker could use this to cause a denial of service (system crash) or possibly execute arbitrary code.
+
+      [ Ubuntu: 5.4.0-131.147 ]
+
+      * CVE-2022-2602
+        - SAUCE: io_uring/af_unix: defer registered files gc to io_uring release
+        - SAUCE: io_uring/af_unix: fix memleak during unix GC
+      * CVE-2022-41674
+        - SAUCE: wifi: cfg80211: fix u8 overflow in
+          cfg80211_update_notlisted_nontrans()
+        - SAUCE: wifi: cfg80211/mac80211: reject bad MBSSID elements
+        - SAUCE: wifi: cfg80211: ensure length byte is present before access
+        - SAUCE: wifi: mac80211_hwsim: avoid mac80211 warning on bad rate
+        - SAUCE: wifi: cfg80211: update hidden BSSes to avoid WARN_ON
+      * CVE-2022-42721
+        - SAUCE: wifi: cfg80211: avoid nontransmitted BSS list corruption
+      * CVE-2022-42720
+        - SAUCE: wifi: cfg80211: fix BSS refcounting bugs
+
+     -- Thadeu Lima de Souza Cascardo <cascardo@canonical.com>  Sun, 16 Oct 2022 23:55:23 -0300
+
+
+If you wish to use `ubuntu-package-changelog` to only show referenced CVEs in a changelog for
+a given Ubuntu source package. Eg::
+
+    ubuntu-package-changelog --highlight-cves-only focal Updates linux-azure
+    linux-azure (5.4.0-1094.100) focal; urgency=medium
+
+      CVEs addressed/mitigated in linux-azure version 5.4.0-1094.100:
+        CVE-2022-2602 (high priority)
+        CVE-2022-41674 (medium priority)
+        CVE-2022-42721 (medium priority)
+        CVE-2022-42720 (medium priority)
+
+     -- Thadeu Lima de Souza Cascardo <cascardo@canonical.com>  Sun, 16 Oct 2022 23:55:23 -0300
+
+This `--highlight-cves-only` flag can be used in conjunction with `--highlight-cves-show-cve-description` to only show referenced CVEs in a changelog and also include the CVE description. Eg::
+
+    ubuntu-package-changelog --highlight-cves-only --highlight-cves-show-cve-description focal Updates linux-azure
+    linux-azure (5.4.0-1094.100) focal; urgency=medium
+
+      CVEs addressed/mitigated in linux-azure version 5.4.0-1094.100:
+        CVE-2022-2602 (high priority):  David Bouman and Billy Jheng Bing Jhong discovered that a race condition existed in the io_uring subsystem in the Linux kernel, leading to a use- after-free vulnerability. A local attacker could use this to cause a denial of service (system crash) or possibly execute arbitrary code.
+        CVE-2022-41674 (medium priority):  Sönke Huster discovered that an integer overflow vulnerability existed in the WiFi driver stack in the Linux kernel, leading to a buffer overflow. A physically proximate attacker could use this to cause a denial of service (system crash) or possibly execute arbitrary code.
+        CVE-2022-42721 (medium priority):  Sönke Huster discovered that the WiFi driver stack in the Linux kernel did not properly handle BSSID/SSID lists in some situations. A physically proximate attacker could use this to cause a denial of service (infinite loop).
+        CVE-2022-42720 (medium priority):  Sönke Huster discovered that the WiFi driver stack in the Linux kernel did not properly perform reference counting in some situations, leading to a use-after-free vulnerability. A physically proximate attacker could use this to cause a denial of service (system crash) or possibly execute arbitrary code.
+
+     -- Thadeu Lima de Souza Cascardo <cascardo@canonical.com>  Sun, 16 Oct 2022 23:55:23 -0300
+
 Installation
 ============
 
