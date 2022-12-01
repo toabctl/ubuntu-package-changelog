@@ -1,12 +1,18 @@
 #!/usr/bin/python3
 
+import re
 import sys
 import argparse
 import urllib.parse
+from lazr.restfulclient.errors import NotFound
 from launchpadlib.launchpad import Launchpad
 
 
-def _lp_get_changelog_url(args, lp):
+def _lp_get_changelog_url(sources):
+    return sources.changelogUrl()
+
+
+def _lp_get_sources(args, lp):
     ubuntu = lp.distributions["ubuntu"]
     pocket = args.pocket
     if args.ppa:
@@ -19,6 +25,7 @@ def _lp_get_changelog_url(args, lp):
         archive = ubuntu.main_archive
 
     lp_series = ubuntu.getSeries(name_or_version=args.series)
+
     sources = _get_published_sources(archive,
                                      args.package,
                                      lp_series,
@@ -39,11 +46,7 @@ def _lp_get_changelog_url(args, lp):
                                              source_package_name,
                                              lp_series,
                                              pocket)
-
-    if len(sources) == 1:
-        return sources[0].changelogUrl()
-    else:
-        return None
+    return sources
 
 
 def _get_binary_packages(archive, binary_package_name, pocket):
@@ -79,11 +82,25 @@ def _parser():
         description='Ubuntu package changelog finder')
     parser.add_argument('--lp-user', help='Launchpad username', default=None)
     parser.add_argument('--ppa', help='Search for a package in the given PPA instead'
-                        'of the Ubuntu archive. Given PPA must have the '
-                        'format "owner/ppa-name". Eg. "toabctl/testing"',
+                                      'of the Ubuntu archive. Given PPA must have the '
+                                      'format "owner/ppa-name". Eg. "toabctl/testing"',
                         type=_args_validate_ppa_name)
     parser.add_argument('--entries', help='number of changelog entries to get from the '
-                        'changelog. 0 mean all. Default: %(default)s', type=int, default=1)
+                                          'changelog. 0 mean all. Default: %(default)s', type=int, default=1)
+    parser.add_argument('--highlight-cves',
+                        help='Highlight the CVEs referenced in each individual changelog entry'
+                             '. Default: %(default)s',
+                        action='store_true')
+    parser.add_argument('--highlight-cves-only',
+                        help='Highlight the CVEs referenced in each individual changelog entry '
+                             'but do NOT show the rest of the content of the changelog entry'
+                             '. Default: %(default)s',
+                        action='store_true')
+    parser.add_argument('--highlight-cves-show-cve-description',
+                        help='When highlighting CVEs, show the CVE description. '
+                             '`--highlight-cves` or `--highlight-cve-only` '
+                             'must also be used for this to take affect. Default: %(default)s',
+                        action='store_true')
     parser.add_argument('series', help='the Ubuntu series eg. "20.04" or "focal"')
     parser.add_argument('pocket',
                         choices=['Release', 'Security', 'Updates', 'Proposed', 'Backports'],
@@ -104,22 +121,120 @@ def main():
             'ubuntu-package-changelog',
             'production', version='devel')
 
-    changelog_url = _lp_get_changelog_url(args, lp)
-    if not changelog_url:
+    sources = _lp_get_sources(args, lp)
+
+    if len(sources) != 1:
         print('no changelog found')
         sys.exit(0)
+
+    changelog_url = _lp_get_changelog_url(sources[0])
+    source_package_name = sources[0].source_package_name
 
     url = lp._root_uri.append(urllib.parse.urlparse(changelog_url).path.lstrip('/'))
     resp = lp._browser.get(url).decode('utf-8')
     entry_count = 0
+    changelog_entry_lines = []
     for line in resp.splitlines():
         line = line.rstrip()
+
+        # this is the first line of a changelog entry. Find the version and reset lists for
+        # changelog entry lines and changelog entry cves
+        if source_package_name in line and line.startswith(source_package_name) and ' (' in line and ')' in line:
+            individual_changelog_entry_lines = []
+            individual_changelog_entry_cves = []
+            individual_changelog_entry_source_package_version = line[line.index('(') + 1: line.index(')')]
+
+        if (args.highlight_cves or args.highlight_cves_only) and 'CVE' in line:
+            cve_pos = [(m.start(), m.end()) for m in re.finditer(r'CVE-\d+-\d+', line)]
+            for start, end in cve_pos:
+                cve = line[start:end].strip()
+                if cve not in [individual_changelog_entry_cve['cve']
+                               for individual_changelog_entry_cve in individual_changelog_entry_cves]:
+                    cve_details = {}
+                    cve_details['cve'] = cve
+                    cve_details_lines = _get_cve_details(cve, lp)
+                    cve_ubuntu_description = ''
+                    cve_description = ''
+                    for cve_details_line in cve_details_lines:
+                        # only get the CVE description if the user has requested it
+                        if args.highlight_cves_show_cve_description and not cve_ubuntu_description \
+                                and cve_details_line.startswith('Ubuntu-Description:'):
+                            # get the string in the line after the Ubuntu-Description: line
+                            # while the next line is not 'Notes' keep appending to cve_description
+                            while True:
+                                next_line = next(cve_details_lines)
+                                if next_line.startswith('Notes'):
+                                    break
+                                cve_ubuntu_description += next_line
+                        if args.highlight_cves_show_cve_description and not cve_description \
+                                and cve_details_line.startswith('Description:'):
+                            # get the string in the line after the Description: line
+                            # while the next line is not 'Notes' keep appending to cve_description
+                            while True:
+                                next_line = next(cve_details_lines)
+                                if next_line.startswith('Ubuntu-Description:'):
+                                    break
+                                cve_description += next_line
+                        if 'Priority:' in cve_details_line:
+                            cve_details['cve_priority'] = cve_details_line.split('Priority:')[1].strip()
+                    cve_details['cve_description'] = cve_ubuntu_description \
+                        if cve_ubuntu_description else cve_description
+                    individual_changelog_entry_cves.append(cve_details)
+
+        individual_changelog_entry_lines.append(line)
+
+        # the '--' string is used to separate entries in the changelog as it is the last line of a changelog entry
+        # example "-- Maintainer Name <maintainer@email.com>  Mon, 17 Oct 2022 10:32:58 -0300"
         if line.startswith(' -- '):
             entry_count += 1
+            cve_details_insertion_index_start = 2  # save where we start inserting CVE details.
+            # The default is at index 2 which is after the changlog entry version and date
+            if (args.highlight_cves or args.highlight_cves_only) and individual_changelog_entry_cves:
+                individual_changelog_entry_lines.insert(1, '\n  CVEs addressed/mitigated in {} version {}:'.format(
+                    source_package_name, individual_changelog_entry_source_package_version))
+                for individual_changelog_entry_cve in individual_changelog_entry_cves:
+                    individual_changelog_entry_lines.insert(
+                        cve_details_insertion_index_start,
+                        '    {} ({} priority){}'.format(
+                            individual_changelog_entry_cve['cve'],
+                            individual_changelog_entry_cve['cve_priority'],
+                            ': {}'.format(individual_changelog_entry_cve['cve_description'])
+                            if args.highlight_cves_show_cve_description else ''))
+                    cve_details_insertion_index_start += 1
+            elif (args.highlight_cves or args.highlight_cves_only) and not individual_changelog_entry_cves:
+                individual_changelog_entry_lines.insert(1, '\n  No CVEs addressed/mitigated in {} version {}'.format(
+                    source_package_name, individual_changelog_entry_source_package_version))
+
+            # If we only want to show the highlighted CVEs for this changelog entry then remove the other lines
+            if args.highlight_cves_only and individual_changelog_entry_lines and cve_details_insertion_index_start:
+                changelog_entry_lines.extend(individual_changelog_entry_lines[0:cve_details_insertion_index_start])
+                changelog_entry_lines.extend(individual_changelog_entry_lines[-2:])
+                changelog_entry_lines.append('\n')
+            else:  # otherwise show the entire changelog entry including the CVEs
+                changelog_entry_lines.extend(individual_changelog_entry_lines)
+
+        # If we have parsed all the entries we want, then we can stop parsing the changelog
         if args.entries > 0 and entry_count >= args.entries:
-            print(line)
             break
-        print(line)
+
+    # print the lines in changlog_entry_lines
+    print('\n'.join(changelog_entry_lines))
+
+
+def _get_cve_details(cve, lp):
+    # download the cve details and parse so we can get the CVE description and the CVE priority
+    cve_details_lines = []
+    possible_cve_detail_locations = ['active', 'retired', 'ignored']
+    for possible_cve_detail_location in possible_cve_detail_locations:
+        try:
+            cve_details_url = 'https://git.launchpad.net/ubuntu-cve-tracker/plain/{}/{}'.format(
+                possible_cve_detail_location, cve)
+            cve_details_resp = lp._browser.get(cve_details_url).decode('utf-8')
+            cve_details_lines = iter(cve_details_resp.splitlines())
+            return cve_details_lines
+        except NotFound:
+            pass  # Keep trying until we find the cve details
+    return cve_details_lines
 
 
 if __name__ == '__main__':
