@@ -187,10 +187,11 @@ def main():
         # example "-- Maintainer Name <maintainer@email.com>  Mon, 17 Oct 2022 10:32:58 -0300"
         if line.startswith(' -- '):
             entry_count += 1
+            cve_details_insertion_index_start = 2  # save where we start inserting CVE details.
+            # The default is at index 2 which is after the changlog entry version and date
             if (args.highlight_cves or args.highlight_cves_only) and individual_changelog_entry_cves:
                 individual_changelog_entry_lines.insert(1, '\n  CVEs addressed/mitigated in {} version {}:'.format(
                     source_package_name, individual_changelog_entry_source_package_version))
-                cve_details_insertion_index_start = 2
                 for individual_changelog_entry_cve in individual_changelog_entry_cves:
                     individual_changelog_entry_lines.insert(
                         cve_details_insertion_index_start,
@@ -200,12 +201,16 @@ def main():
                             ': {}'.format(individual_changelog_entry_cve['cve_description'])
                             if args.highlight_cves_show_cve_description else ''))
                     cve_details_insertion_index_start += 1
+            elif (args.highlight_cves or args.highlight_cves_only) and not individual_changelog_entry_cves:
+                individual_changelog_entry_lines.insert(1, '\n  No CVEs addressed/mitigated in {} version {}'.format(
+                    source_package_name, individual_changelog_entry_source_package_version))
 
-            if args.highlight_cves_only:
+            # If we only want to show the highlighted CVEs for this changelog entry then remove the other lines
+            if args.highlight_cves_only and individual_changelog_entry_lines and cve_details_insertion_index_start:
                 changelog_entry_lines.extend(individual_changelog_entry_lines[0:cve_details_insertion_index_start])
                 changelog_entry_lines.extend(individual_changelog_entry_lines[-2:])
                 changelog_entry_lines.append('\n')
-            else:
+            else:  # otherwise show the entire changelog entry including the CVEs
                 changelog_entry_lines.extend(individual_changelog_entry_lines)
 
         # If we have parsed all the entries we want, then we can stop parsing the changelog
