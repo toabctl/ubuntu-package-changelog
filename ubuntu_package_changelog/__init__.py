@@ -24,6 +24,8 @@ def _lp_get_changelog_url(args, lp):
                                      lp_series,
                                      pocket)
     if len(sources) == 0:
+        print(f'INFO: No published sources found for {args.package} in {args.series} {args.pocket}')
+        print('INFO: \tTrying to find a binary package with that name ...')
         # unable to find published sources for args.package.
         # Perhaps this is a binary package name so we can
         # do a lookup to see if there exists a source package for
@@ -34,11 +36,19 @@ def _lp_get_changelog_url(args, lp):
         if len(binaries):
             # there were published binaries with this name.
             # now get the source package name so we can get the changelog
-            source_package_name = binaries[0].source_package_name
-            sources = _get_published_sources(archive,
-                                             source_package_name,
-                                             lp_series,
-                                             pocket)
+            for binary in binaries:
+                source_package_name = binary.source_package_name
+                sources = _get_published_sources(archive,
+                                                 source_package_name,
+                                                 lp_series,
+                                                 pocket)
+                if len(sources) > 0:
+                    print(f'INFO: \tFound source package {source_package_name} for binary package '
+                          f'{args.package} with published sources.')
+                    print(f'INFO: \tChangelog for source package {source_package_name} will be parsed\n\n')
+                    break
+        else:
+            print(f'INFO: \tNo published binaries found for {args.package} in {args.series} {args.pocket}\n\n')
 
     if len(sources) == 1:
         return sources[0].changelogUrl()
@@ -106,7 +116,8 @@ def main():
 
     changelog_url = _lp_get_changelog_url(args, lp)
     if not changelog_url:
-        print('no changelog found')
+        print('No changelog found for binary or source package "{}" in {} {}'.format(
+            args.package, args.series, args.pocket))
         sys.exit(0)
 
     url = lp._root_uri.append(urllib.parse.urlparse(changelog_url).path.lstrip('/'))
